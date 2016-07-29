@@ -9,7 +9,7 @@ var cache = new Cache();
 
 gulp.task('default', ['compile', 'run']);
 
-gulp.task('compile', function () {
+gulp.task('compile', function() {
     var stream = gulp.src('./src/**/*.js')
         .pipe(cache.filter())
         .pipe(babel({}))
@@ -18,7 +18,7 @@ gulp.task('compile', function () {
     return stream;
 });
 
-gulp.task('watch', ['compile'], function () {
+gulp.task('watch', ['compile'], function() {
     var stream = nodemon({
         script: 'dist/',
         watch: 'src',
@@ -28,15 +28,15 @@ gulp.task('watch', ['compile'], function () {
     return stream;
 });
 
-gulp.task('run', function () {
-    exec('node ./dist/index.js', function (err, stdout, stderr) {
+gulp.task('run', function() {
+    exec('node ./dist/index.js', function(err, stdout, stderr) {
         console.log(stdout);
         console.log(stderr);
     });
 });
 
-gulp.task('test', function () {
-    exec('mocha', function (err, stdout, stderr) {
+gulp.task('test', ['compile'], function() {
+    exec('mocha', function(err, stdout, stderr) {
         console.log(stdout);
         console.log(stderr);
     });
