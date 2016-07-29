@@ -1,0 +1,27 @@
+{
+  "name": "ipblocker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rikaardhosein/ipblocker.git"
+  },
+  "author": "Rikaard Hosein",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rikaardhosein/ipblocker/issues"
+  },
+  "homepage": "https://github.com/rikaardhosein/ipblocker#readme",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-file-cache": "0.0.1",
+    "gulp-nodemon": "^2.1.0"
+  },
+  "dependencies": {}
+}
