@@ -4,6 +4,7 @@ const _ = require('lodash');
 const bunyan = require('bunyan');
 const uuid = require('uuid');
 const os = require('os');
+const hapi = require('hapi');
 
 const conf = require('./config');
 const ip_blacklist = require('./ip_blacklist');
@@ -64,4 +65,37 @@ fs.readdir(blocklists_directory, function(err, items) {
         failed: failure
     }, 'Finished loading blocklist-ipsets.');
 
+});
+
+
+
+
+//Let's get a server up and running
+
+
+const server = new hapi.Server();
+const host = conf.get('blocklist_bind_addr');
+const port = conf.get('blocklist_bind_port');
+server.connection({
+  host: host,
+  port: port
+});
+
+
+server.route({
+    method: 'GET',
+    path: '/hello',
+    handler: function(request, reply) {
+        return reply('hello world!');
+    }
+});
+
+
+server.start((err) => {
+  if (err) {
+      log.error(err.message);
+      throw err;
+  }
+
+  log.info({host: host, port: port},'Server running.');
 });
