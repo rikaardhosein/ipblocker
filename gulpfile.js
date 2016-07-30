@@ -11,9 +11,9 @@ gulp.task('default', ['compile', 'run']);
 
 gulp.task('compile', function() {
     var stream = gulp.src('./src/**/*.js')
-        .pipe(cache.filter())
+        //.pipe(cache.filter())
         .pipe(babel({}))
-        .pipe(cache.cache())
+        //.pipe(cache.cache())
         .pipe(gulp.dest('./dist'))
     return stream;
 });
