@@ -69,33 +69,42 @@ fs.readdir(blocklists_directory, function(err, items) {
 
 
 
-
-//Let's get a server up and running
-
-
 const server = new hapi.Server();
 const host = conf.get('blocklist_bind_addr');
 const port = conf.get('blocklist_bind_port');
 server.connection({
-  host: host,
-  port: port
+    host: host,
+    port: port
 });
 
 
 server.route({
     method: 'GET',
-    path: '/hello',
+    path: '/allowed/{ipaddress}',
     handler: function(request, reply) {
-        return reply('hello world!');
+        //TODO: add validation here
+        //TODO: log how long it took to complete request
+        //TODO: check what response format is supposed to be.
+        let response;
+        const result = blacklist.get(request.params.ipaddress);
+        if (result === null) {
+            response = "ALLOWED";
+        } else {
+            response = "DENIED: " + JSON.stringify(result);
+        }
+        return reply(response);
     }
 });
 
 
 server.start((err) => {
-  if (err) {
-      log.error(err.message);
-      throw err;
-  }
+    if (err) {
+        log.error(err.message);
+        throw err;
+    }
 
-  log.info({host: host, port: port},'Server running.');
+    log.info({
+        host: host,
+        port: port
+    }, 'Server running.');
 });
