@@ -1,33 +1,67 @@
-const ip_blacklist = require('./ip_blacklist');
 const fs = require('fs');
 const path = require('path');
 const _ = require('lodash');
+const bunyan = require('bunyan');
+const uuid = require('uuid');
+const os = require('os');
 
+const conf = require('./config');
+const ip_blacklist = require('./ip_blacklist');
 
-//Let's see how long it'll take me to read in all these files.
+const log = bunyan.createLogger({
+    name: "ipblocker",
+    uuid: uuid.v4(),
+    hostname: os.hostname(),
+    level: 'debug'
+});
+
+log.info({
+    conf: conf
+}, "Configuration");
+log.info("Initializing application. Loading blocklist-ipsets...");
+
 
 const blacklist = new ip_blacklist.IpBlacklist();
-
-
-const blocklists_directory = '/Users/Rikaard/blocklist-ipsets';
+const blocklists_directory = conf.get('blocklist_ipsets_path');
 
 const add_file_to_blacklist = function(filepath, blacklist) {
-    let data = fs.readFileSync(filepath).toString();
-    data = data.split('\n')
-    data = _.filter(data, line => line[0] !== '#')
+    let data = fs.readFileSync(filepath, {
+        encoding: 'utf8'
+    });
+    data = data.split('\n');
+    data = _.filter(data, line => line[0] !== '#');
     _.forEach(data, function(ip) {
-        blacklist.add(ip, "metadata");
+        blacklist.add(ip, {
+            source: filepath
+        });
     });
 };
 
 fs.readdir(blocklists_directory, function(err, items) {
-    //items holds a list of items. I'm only interested in .ipset.
-    files = _.filter(items, item => path.extname(item) === '.ipset')
+
+    files = _.filter(items, item => path.extname(item) === '.ipset');
+    let success = 0,
+        failure = 0;
 
     let filepath;
     _.forEach(files, function(file) {
-          filepath = blocklists_directory + '/' + file;
-          add_file_to_blacklist(filepath, blacklist);
+        filepath = blocklists_directory + '/' + file;
+        try {
+            add_file_to_blacklist(filepath, blacklist);
+        } catch (err) {
+            log.error(err.message)
+                ++failure;
+            return
+        }
+        ++success;
+        log.debug({
+            file: filepath
+        }, "Loaded blocklist-ipset file.");
     });
+
+    log.info({
+        successful: success,
+        failed: failure
+    }, 'Finished loading blocklist-ipsets.');
 
 });
