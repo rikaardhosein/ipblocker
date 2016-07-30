@@ -55,6 +55,10 @@ fs.readdir(blocklists_directory, function(err, items) {
             return
         }
         ++success;
+
+        //TODO: Could make these logs better.
+        //Have an operation parameters like BLOCKLIST_IPSET_FILE_ADD
+        //and BLOCKLIST_IPSET_IP_ADD
         log.debug({
             file: filepath
         }, "Loaded blocklist-ipset file.");
@@ -72,6 +76,9 @@ fs.readdir(blocklists_directory, function(err, items) {
 const server = new hapi.Server();
 const host = conf.get('blocklist_bind_addr');
 const port = conf.get('blocklist_bind_port');
+
+
+//TODO: need to get hapi to use bunyan
 server.connection({
     host: host,
     port: port
