@@ -19,10 +19,16 @@ const conf = convict({
         format: 'port',
         default: 8080,
         env: 'BLOCKLIST_BIND_PORT'
+    },
+    blocklist_git_repo: {
+        doc: 'The git repository containing the blocklist ipsets.',
+        format: String,
+        default: 'https://github.com/firehol/blocklist-ipsets.git',
+        env: 'BLOCKLIST_GIT_REPO'
     }
 });
 
 conf.validate({
-    strict: true
+    strict: false
 });
 module.exports = conf;

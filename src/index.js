@@ -5,85 +5,107 @@ const bunyan = require('bunyan');
 const uuid = require('uuid');
 const os = require('os');
 const hapi = require('hapi');
+const git = require('nodegit');
 
 const conf = require('./config');
 const ip_blacklist = require('./ip_blacklist');
 
 const log = bunyan.createLogger({
-    name: "ipblocker",
+    name: 'ipblocker',
     uuid: uuid.v4(),
     hostname: os.hostname(),
-    level: 'debug'
+    level: 'debug',
+    src: true
 });
 
 log.info({
-    conf: conf
-}, "Configuration");
-log.info("Initializing application. Loading blocklist-ipsets...");
-
+    conf: conf.toString()
+}, 'Configuration');
+log.info('Initializing application. Loading blocklist-ipsets...');
 
 const blacklist = new ip_blacklist.IpBlacklist();
 const blocklists_directory = conf.get('blocklist_ipsets_path');
-
-const add_file_to_blacklist = function(filepath, blacklist) {
-    let data = fs.readFileSync(filepath, {
-        encoding: 'utf8'
-    });
-    data = data.split('\n');
-    data = _.filter(data, line => line[0] !== '#');
-    _.forEach(data, function(ip) {
-        blacklist.add(ip, {
-            source: filepath
-        });
-    });
-};
-
-fs.readdir(blocklists_directory, function(err, items) {
-
-    files = _.filter(items, item => path.extname(item) === '.ipset');
-    let success = 0,
-        failure = 0;
-
-    let filepath;
-    _.forEach(files, function(file) {
-        filepath = blocklists_directory + '/' + file;
-        try {
-            add_file_to_blacklist(filepath, blacklist);
-        } catch (err) {
-            log.error(err.message)
-                ++failure;
-            return
-        }
-        ++success;
-
-        //TODO: Could make these logs better.
-        //Have an operation parameters like BLOCKLIST_IPSET_FILE_ADD
-        //and BLOCKLIST_IPSET_IP_ADD
-        log.debug({
-            file: filepath
-        }, "Loaded blocklist-ipset file.");
-    });
-
-    log.info({
-        successful: success,
-        failed: failure
-    }, 'Finished loading blocklist-ipsets.');
-
-});
-
-
-
-const server = new hapi.Server();
+const blocklist_git_repo = conf.get('blocklist_git_repo');
 const host = conf.get('blocklist_bind_addr');
 const port = conf.get('blocklist_bind_port');
 
+
+
+const load_blacklist = function(blacklist, blocklists_directory) {
+
+    const add_file_to_blacklist = function(filepath, blacklist) {
+        let data = fs.readFileSync(filepath, {
+            encoding: 'utf8'
+        });
+        data = data.split('\n');
+        data = _.filter(data, line => line[0] !== '#');
+        _.forEach(data, function(ip) {
+            log.trace({
+                action: 'BLOCKLIST_IPSET_FILE_ADD',
+                ip: ip,
+                file: filepath
+            });
+            blacklist.add(ip, {
+                source: filepath
+            });
+        });
+    };
+
+
+    fs.readdir(blocklists_directory, function(err, items) {
+        if (err != null) {
+            log.error({
+                error: err.message
+            }, "Failed to get directory listing!");
+        }
+        log.info("DIRECTORY: " + blocklists_directory);
+        files = _.filter(items, item => path.extname(item) === '.ipset');
+        let success = 0,
+            failure = 0;
+
+        let filepath;
+        _.forEach(files, function(file) {
+            filepath = blocklists_directory + '/' + file;
+            try {
+                add_file_to_blacklist(filepath, blacklist);
+            } catch (err) {
+                log.error({
+                        filepath: filepath,
+                        blocklists_directory: blocklists_directory,
+                        error: err.message
+                    }, "Failed to read ipset file!")
+                    ++failure;
+                return
+            }
+            ++success;
+
+            log.debug({
+                file: filepath,
+                action: 'BLOCKLIST_IPSET_FILE_ADD'
+            });
+        });
+
+        log.info({
+            action: 'BLOCKLIST_LOADED',
+            successful: success,
+            failed: failure
+        }, 'Finished loading blocklist-ipsets.');
+
+    });
+
+};
+
+
+
+load_blacklist(blacklist, blocklists_directory);
+
+const server = new hapi.Server();
 
 //TODO: need to get hapi to use bunyan
 server.connection({
     host: host,
     port: port
 });
-
 
 server.route({
     method: 'GET',
@@ -102,7 +124,6 @@ server.route({
         return reply(response);
     }
 });
-
 
 server.start((err) => {
     if (err) {
