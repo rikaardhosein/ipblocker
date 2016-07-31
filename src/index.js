@@ -4,11 +4,13 @@ const _ = require('lodash');
 const bunyan = require('bunyan');
 const uuid = require('uuid');
 const os = require('os');
-const hapi = require('hapi');
+const url = require('url');
+const http = require('http');
 const git = require('nodegit');
 
 const conf = require('./config');
 const ip_blacklist = require('./ip_blacklist');
+const RepositoryMonitor = require('./repository_monitor');
 
 const log = bunyan.createLogger({
     name: 'ipblocker',
@@ -23,7 +25,6 @@ log.info({
 }, 'Configuration');
 log.info('Initializing application. Loading blocklist-ipsets...');
 
-const blacklist = new ip_blacklist.IpBlacklist();
 const blocklists_directory = conf.get('blocklist_ipsets_path');
 const blocklist_git_repo = conf.get('blocklist_git_repo');
 const host = conf.get('blocklist_bind_addr');
@@ -31,7 +32,7 @@ const port = conf.get('blocklist_bind_port');
 
 
 
-const load_blacklist = function(blacklist, blocklists_directory) {
+const load_blacklist = function(blacklist, blocklists_directory, cb) {
 
     const add_file_to_blacklist = function(filepath, blacklist) {
         let data = fs.readFileSync(filepath, {
@@ -91,48 +92,46 @@ const load_blacklist = function(blacklist, blocklists_directory) {
             failed: failure
         }, 'Finished loading blocklist-ipsets.');
 
+        if(cb) cb();
+
     });
 
 };
 
-
+const repoMonitor = new RepositoryMonitor(blocklists_directory, 5000);
+let blacklist = new ip_blacklist.IpBlacklist();
 
 load_blacklist(blacklist, blocklists_directory);
 
-const server = new hapi.Server();
-
-//TODO: need to get hapi to use bunyan
-server.connection({
-    host: host,
-    port: port
+repoMonitor.on('updated', function() {
+  const tempBlacklist = new ip_blacklist.IpBlacklist();
+  load_blacklist(tempBlacklist, blocklists_directory, function() {
+      blacklist = tempBlacklist;
+  });
 });
 
-server.route({
-    method: 'GET',
-    path: '/allowed/{ipaddress}',
-    handler: function(request, reply) {
-        //TODO: add validation here
-        //TODO: log how long it took to complete request
-        //TODO: check what response format is supposed to be.
-        let response;
-        const result = blacklist.get(request.params.ipaddress);
-        if (result === null) {
-            response = "ALLOWED";
+
+http.createServer(function(request, response) {
+  let resp = {};
+	response.setHeader('Connection', 'close');
+  const urlParts = url.parse(request.url, true);
+  if (urlParts.pathname === '/check' && 'ip' in urlParts.query) {
+        resp.status = 'success';
+        const ip = urlParts.query['ip'];
+        const result = blacklist.get(ip);
+        if (result !== null) {
+            resp.allowed = false;
+            resp.metadata = result;
         } else {
-            response = "DENIED: " + JSON.stringify(result);
+            resp.allowed = true;
         }
-        return reply(response);
-    }
-});
-
-server.start((err) => {
-    if (err) {
-        log.error(err.message);
-        throw err;
-    }
-
-    log.info({
-        host: host,
-        port: port
-    }, 'Server running.');
-});
+  } else {
+      resp.status = 'error';
+      if (urlParts.pathname !== '/check') {
+        resp.message = 'Invalid path!';
+      } else if(!('ip' in urlParts.query)) {
+        resp.message = 'Missing ip parameter in query string!';
+      }
+  }
+	response.end(JSON.stringify(resp));
+}).listen(port);
