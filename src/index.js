@@ -7,6 +7,7 @@ const os = require('os');
 const url = require('url');
 const http = require('http');
 const git = require('nodegit');
+const byline = require('byline');
 
 const conf = require('./config');
 const ip_blacklist = require('./ip_blacklist');
@@ -16,7 +17,7 @@ const log = bunyan.createLogger({
     name: 'ipblocker',
     uuid: uuid.v4(),
     hostname: os.hostname(),
-    level: 'debug',
+    level: 'info',
     src: true
 });
 
@@ -35,21 +36,31 @@ const port = conf.get('blocklist_bind_port');
 const load_blacklist = function(blacklist, blocklists_directory, cb) {
 
     const add_file_to_blacklist = function(filepath, blacklist) {
-        let data = fs.readFileSync(filepath, {
-            encoding: 'utf8'
-        });
-        data = data.split('\n');
-        data = _.filter(data, line => line[0] !== '#');
-        _.forEach(data, function(ip) {
-            log.trace({
-                action: 'BLOCKLIST_IPSET_FILE_ADD',
-                ip: ip,
-                file: filepath
-            });
-            blacklist.add(ip, {
+        var stream = byline(fs.createReadStream(filepath, { encoding: 'utf8' }));
+        stream.on('data', function(line) {
+          if(line[0] !== '#') {
+              blacklist.add(ip, {
                 source: filepath
-            });
+              });
+          }
         });
+
+
+        // let data = fs.readFileSync(filepath, {
+        //     encoding: 'utf8'
+        // });
+        // data = data.split('\n');
+        // data = _.filter(data, line => line[0] !== '#');
+        // _.forEach(data, function(ip) {
+        //     log.trace({
+        //         action: 'BLOCKLIST_IPSET_FILE_ADD',
+        //         ip: ip,
+        //         file: filepath
+        //     });
+        //     blacklist.add(ip, {
+        //         source: filepath
+        //     });
+        // });
     };
 
 
@@ -92,7 +103,7 @@ const load_blacklist = function(blacklist, blocklists_directory, cb) {
             failed: failure
         }, 'Finished loading blocklist-ipsets.');
 
-        if(cb) cb();
+        if (cb) cb();
 
     });
 
@@ -103,19 +114,20 @@ let blacklist = new ip_blacklist.IpBlacklist();
 
 load_blacklist(blacklist, blocklists_directory);
 
+
 repoMonitor.on('updated', function() {
-  const tempBlacklist = new ip_blacklist.IpBlacklist();
-  load_blacklist(tempBlacklist, blocklists_directory, function() {
-      blacklist = tempBlacklist;
-  });
+    const tempBlacklist = new ip_blacklist.IpBlacklist();
+    load_blacklist(tempBlacklist, blocklists_directory, function() {
+        blacklist = tempBlacklist;
+    });
 });
 
 
 http.createServer(function(request, response) {
-  let resp = {};
-	response.setHeader('Connection', 'close');
-  const urlParts = url.parse(request.url, true);
-  if (urlParts.pathname === '/check' && 'ip' in urlParts.query) {
+    let resp = {};
+    response.setHeader('Connection', 'close');
+    const urlParts = url.parse(request.url, true);
+    if (urlParts.pathname === '/check' && 'ip' in urlParts.query) {
         resp.status = 'success';
         const ip = urlParts.query['ip'];
         const result = blacklist.get(ip);
@@ -125,13 +137,13 @@ http.createServer(function(request, response) {
         } else {
             resp.allowed = true;
         }
-  } else {
-      resp.status = 'error';
-      if (urlParts.pathname !== '/check') {
-        resp.message = 'Invalid path!';
-      } else if(!('ip' in urlParts.query)) {
-        resp.message = 'Missing ip parameter in query string!';
-      }
-  }
-	response.end(JSON.stringify(resp));
+    } else {
+        resp.status = 'error';
+        if (urlParts.pathname !== '/check') {
+            resp.message = 'Invalid path!';
+        } else if (!('ip' in urlParts.query)) {
+            resp.message = 'Missing ip parameter in query string!';
+        }
+    }
+    response.end(JSON.stringify(resp));
 }).listen(port);

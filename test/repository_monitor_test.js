@@ -46,6 +46,8 @@ describe('Git Repository Monitor', function() {
 
     it('should emit error if repository does not exist', function(done) {
         const repoMonitor = new RepositoryMonitor("DOES_NOT_EXIST", interval);
-        repoMonitor.on('error', ()=>{done();});
+        repoMonitor.on('error', () => {
+            done();
+        });
     });
 });
