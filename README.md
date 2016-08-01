@@ -15,9 +15,9 @@ I realized that for any ip address there were only 31 subnets that it could belo
 
 Therefore, I'm able to determine if an ip address is in the blacklist or not in 32 lookups or less in a hashmap which should be pretty fast on any modern machine.
 
+I also considered placing a bloom filter in front of this (I've read about them but I've never used one before) since it would speed up the code path for allowed ip addresses (which the majority of requests will probably include) most of the time. This would've been especially helpful since the code path for allowed ip addresses given the method above is the slowest.
 
-
-
+However, the more I thought about it, the more I felt that it would've been less efficient because of the K hash functions that I'd need to compute on every request. I could be wrong about this being slower but it's something I could play with if my current method turns out to be too slow during the load tests.
 
 # Reading in ipset and netset files.
 
