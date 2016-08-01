@@ -12,6 +12,7 @@ const byline = require('byline');
 const conf = require('./config');
 const ip_blacklist = require('./ip_blacklist');
 const RepositoryMonitor = require('./repository_monitor');
+const RepositoryUpdater = require('./repository_updater');
 
 const log = bunyan.createLogger({
     name: 'ipblocker',
@@ -36,31 +37,22 @@ const port = conf.get('blocklist_bind_port');
 const load_blacklist = function(blacklist, blocklists_directory, cb) {
 
     const add_file_to_blacklist = function(filepath, blacklist) {
-        var stream = byline(fs.createReadStream(filepath, { encoding: 'utf8' }));
+        var stream = byline(fs.createReadStream(filepath, {
+            encoding: 'utf8'
+        }));
         stream.on('data', function(line) {
-          if(line[0] !== '#') {
-              blacklist.add(ip, {
-                source: filepath
-              });
-          }
+            if (line[0] !== '#') {
+                blacklist.add(line, {
+                    source: filepath
+                });
+
+                log.trace({
+                    action: 'BLOCKLIST_IPSET_IP_ADD',
+                    ip: line,
+                    file: filepath
+                });
+            }
         });
-
-
-        // let data = fs.readFileSync(filepath, {
-        //     encoding: 'utf8'
-        // });
-        // data = data.split('\n');
-        // data = _.filter(data, line => line[0] !== '#');
-        // _.forEach(data, function(ip) {
-        //     log.trace({
-        //         action: 'BLOCKLIST_IPSET_FILE_ADD',
-        //         ip: ip,
-        //         file: filepath
-        //     });
-        //     blacklist.add(ip, {
-        //         source: filepath
-        //     });
-        // });
     };
 
 
@@ -69,11 +61,12 @@ const load_blacklist = function(blacklist, blocklists_directory, cb) {
             log.error({
                 error: err.message
             }, "Failed to get directory listing!");
+            return;
         }
-        log.info("DIRECTORY: " + blocklists_directory);
+
         files = _.filter(items, item => path.extname(item) === '.ipset');
-        let success = 0,
-            failure = 0;
+
+        let success = 0, failure = 0;
 
         let filepath;
         _.forEach(files, function(file) {
@@ -87,7 +80,7 @@ const load_blacklist = function(blacklist, blocklists_directory, cb) {
                         error: err.message
                     }, "Failed to read ipset file!")
                     ++failure;
-                return
+                return;
             }
             ++success;
 
@@ -110,6 +103,8 @@ const load_blacklist = function(blacklist, blocklists_directory, cb) {
 };
 
 const repoMonitor = new RepositoryMonitor(blocklists_directory, 5000);
+const repoUpdater = new RepositoryUpdater(blocklists_directory, 5000);
+
 let blacklist = new ip_blacklist.IpBlacklist();
 
 load_blacklist(blacklist, blocklists_directory);
