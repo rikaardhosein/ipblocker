@@ -3,7 +3,7 @@ FROM node:6
 ENV BLOCKLIST_IPSETS_PATH /usr/src/blocklists
 ENV BLOCKLIST_BIND_ADDR 0.0.0.0
 ENV BLOCKLIST_BIND_PORT 8080
-env BLOCKLIST_GIT_REPO https://github.com/firehol/blocklist-ipsets.git
+ENV BLOCKLIST_GIT_REPO https://github.com/rikaardhosein/blocklist-ipsets.git
 
 
 EXPOSE ${BLOCKLIST_BIND_PORT}

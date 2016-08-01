@@ -66,7 +66,8 @@ const load_blacklist = function(blacklist, blocklists_directory, cb) {
 
         files = _.filter(items, item => path.extname(item) === '.ipset');
 
-        let success = 0, failure = 0;
+        let success = 0,
+            failure = 0;
 
         let filepath;
         _.forEach(files, function(file) {
