@@ -155,7 +155,7 @@ net.createServer((socket) => {
             } else {
                 resp.allowed = true;
             }
-            socket.write(JSON.stringify(resp).replace('\n', ' '));
+            socket.write(JSON.stringify(resp).replace('\n', ' ')+'\n');
         });
 
         stream.on('error', (err) => {

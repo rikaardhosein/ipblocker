@@ -5,13 +5,12 @@ ENV BLOCKLIST_BIND_ADDR 0.0.0.0
 ENV BLOCKLIST_BIND_PORT 8080
 ENV BLOCKLIST_GIT_REPO https://github.com/rikaardhosein/blocklist-ipsets.git
 
-
 EXPOSE ${BLOCKLIST_BIND_PORT}
 
 RUN apt-get -y update && \
-    apt-get -y install git
+    apt-get -y install git libstdc++-4.9-dev
 
-RUN git clone -b master --single-branch ${BLOCKLIST_GIT_REPO} ${BLOCKLIST_IPSETS_PATH}
+RUN git clone --depth 1 -b master --single-branch ${BLOCKLIST_GIT_REPO} ${BLOCKLIST_IPSETS_PATH}
 
 WORKDIR ${BLOCKLIST_IPSETS_PATH}
 RUN git checkout master
