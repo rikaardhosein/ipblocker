@@ -2,18 +2,18 @@ const git = require('simple-git');
 const EventEmitter = require('events');
 
 
-class RepositoryUpdater extends EventEmitter{
+class RepositoryUpdater extends EventEmitter {
     constructor(repositoryDir, interval) {
         super();
         const that = this;
-        setInterval(()=>{
-          git(repositoryDir).pull(function(err, update) {
-              if (err) {
-                  that.emit('error', err);
-              } else {
-                  that.emit('pulled');  
-              }
-          });
+        setInterval(() => {
+            git(repositoryDir).pull(function(err, update) {
+                if (err) {
+                    that.emit('error', err);
+                } else {
+                    that.emit('pulled');
+                }
+            });
         }, interval);
     }
 }

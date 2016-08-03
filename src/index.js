@@ -6,6 +6,7 @@ const uuid = require('uuid');
 const os = require('os');
 const url = require('url');
 const http = require('http');
+const net = require('net');
 const git = require('nodegit');
 const byline = require('byline');
 
@@ -114,7 +115,7 @@ load_blacklist(blacklist, blocklists_directory);
 repoMonitor.on('updated', function() {
     log.info({
         repository: blocklists_directory
-    },'Repository updated. Reloading blacklist...');
+    }, 'Repository updated. Reloading blacklist...');
     const tempBlacklist = new ip_blacklist.IpBlacklist();
     load_blacklist(tempBlacklist, blocklists_directory, function() {
         blacklist = tempBlacklist;
@@ -124,19 +125,52 @@ repoMonitor.on('updated', function() {
 
 repoMonitor.on('error', function(err) {
     log.error({
-      error: err.message,
-      repository: blocklists_directory
+        error: err.message,
+        repository: blocklists_directory
     }, 'Error occurred when monitoring repo!');
 });
 
 
 repoUpdater.on('error', function(err) {
     log.error({
-      error: err.message,
-      repository: blocklists_directory
+        error: err.message,
+        repository: blocklists_directory
     }, 'Error occurred when updating repo!');
 });
 
+
+net.createServer((socket) => {
+        const stream = byline(socket);
+        let resp = {};
+        stream.on('data', (ip) => {
+            ip = String(ip)
+            log.info({
+                remoteIp: socket.remoteAddress,
+                ip: ip
+            });
+            const result = blacklist.get(ip);
+            if (result !== null) {
+                resp.allowed = false;
+                resp.metadata = result;
+            } else {
+                resp.allowed = true;
+            }
+            socket.write(JSON.stringify(resp).replace('\n', ' '));
+        });
+
+        stream.on('error', (err) => {
+            log.error({
+                error: err.message,
+                remoteIp: socket.remoteAddress
+            });
+        });
+    })
+    .listen(port + 1, host, () => {
+        log.info({
+            port: port + 1,
+            host: host
+        }, 'TCP Server running');
+    });
 
 
 
@@ -168,4 +202,9 @@ http.createServer(function(request, response) {
         }
     }
     response.end(JSON.stringify(resp));
-}).listen(port);
+}).listen(port, host, () => {
+    log.info({
+        port: port,
+        host: host
+    }, 'HTTP Server running.');
+});

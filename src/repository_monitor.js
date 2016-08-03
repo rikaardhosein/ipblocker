@@ -9,22 +9,22 @@ class RepositoryMonitor extends EventEmitter {
         let initialized = false,
             previousHeadCommitSha = null;
 
-        setInterval(()=>{
+        setInterval(() => {
             git.Repository.open(repositoryDir)
-                .then(repository=>repository.getHeadCommit())
-                .then((headCommit)=>{
+                .then(repository => repository.getHeadCommit())
+                .then((headCommit) => {
                     const currentHeadCommitSha = headCommit ? headCommit.sha() : null;
                     if (!initialized) {
-                      initialized = true;
-                      that.emit('initialized');
-                      return
+                        initialized = true;
+                        that.emit('initialized');
+                        return
                     }
                     if (previousHeadCommitSha !== currentHeadCommitSha) {
-                      previousHeadCommitSha = currentHeadCommitSha;
-                      that.emit('updated');
+                        previousHeadCommitSha = currentHeadCommitSha;
+                        that.emit('updated');
                     }
                 })
-                .catch((err)=>that.emit('error', err));
+                .catch((err) => that.emit('error', err));
         }, interval);
     }
 }
