@@ -1,15 +1,20 @@
-const git = require('nodegit');
+const git = require('simple-git');
+const EventEmitter = require('events');
 
 
-class RepositoryUpdater {
+class RepositoryUpdater extends EventEmitter{
     constructor(repositoryDir, interval) {
-        git.Repository.open(repositoryDir).then(function(repository) {
-            setInterval(function() {
-                repository.fetchAll().then(function() {
-                    repository.mergeBranches('master', 'origin/master');
-                });
-            }, interval);
-        });
+        super();
+        const that = this;
+        setInterval(()=>{
+          git(repositoryDir).pull(function(err, update) {
+              if (err) {
+                  that.emit('error', err);
+              } else {
+                  that.emit('pulled');  
+              }
+          });
+        }, interval);
     }
 }
 

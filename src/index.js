@@ -103,8 +103,8 @@ const load_blacklist = function(blacklist, blocklists_directory, cb) {
 
 };
 
-const repoMonitor = new RepositoryMonitor(blocklists_directory, 5000);
-const repoUpdater = new RepositoryUpdater(blocklists_directory, 5000);
+const repoMonitor = new RepositoryMonitor(blocklists_directory, 70000);
+const repoUpdater = new RepositoryUpdater(blocklists_directory, 60000);
 
 let blacklist = new ip_blacklist.IpBlacklist();
 
@@ -112,11 +112,32 @@ load_blacklist(blacklist, blocklists_directory);
 
 
 repoMonitor.on('updated', function() {
+    log.info({
+        repository: blocklists_directory
+    },'Repository updated. Reloading blacklist...');
     const tempBlacklist = new ip_blacklist.IpBlacklist();
     load_blacklist(tempBlacklist, blocklists_directory, function() {
         blacklist = tempBlacklist;
     });
 });
+
+
+repoMonitor.on('error', function(err) {
+    log.error({
+      error: err.message,
+      repository: blocklists_directory
+    }, 'Error occurred when monitoring repo!');
+});
+
+
+repoUpdater.on('error', function(err) {
+    log.error({
+      error: err.message,
+      repository: blocklists_directory
+    }, 'Error occurred when updating repo!');
+});
+
+
 
 
 http.createServer(function(request, response) {

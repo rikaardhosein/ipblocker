@@ -6,33 +6,26 @@ class RepositoryMonitor extends EventEmitter {
     constructor(repositoryDir, interval) {
         super();
         const that = this;
-        let initialized = false;
+        let initialized = false,
+            previousHeadCommitSha = null;
 
-        git.Repository.open(repositoryDir).then(function(repository) {
-                let previousHeadCommitSha = null;
-
-                repository.getHeadCommit().then(function(headCommit) {
-                    if (headCommit != null) {
-                        previousHeadCommitSha = headCommit.sha();
+        setInterval(()=>{
+            git.Repository.open(repositoryDir)
+                .then(repository=>repository.getHeadCommit())
+                .then((headCommit)=>{
+                    const currentHeadCommitSha = headCommit ? headCommit.sha() : null;
+                    if (!initialized) {
+                      initialized = true;
+                      that.emit('initialized');
+                      return
                     }
-                    that.emit('initialized');
-
-                    setInterval(function() {
-                        repository.getHeadCommit().then(function(headCommit) {
-                            const currentHeadCommitSha = headCommit.sha();
-                            if (previousHeadCommitSha !== currentHeadCommitSha) {
-                                previousHeadCommitSha = currentHeadCommitSha;
-                                that.emit('updated');
-                            }
-                        });
-                    }, interval);
-
-                });
-
-            })
-            .catch(function(err) {
-                that.emit('error', err);
-            });
+                    if (previousHeadCommitSha !== currentHeadCommitSha) {
+                      previousHeadCommitSha = currentHeadCommitSha;
+                      that.emit('updated');
+                    }
+                })
+                .catch((err)=>that.emit('error', err));
+        }, interval);
     }
 }
 
