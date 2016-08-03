@@ -11,7 +11,7 @@ EXPOSE ${BLOCKLIST_BIND_PORT}
 RUN apt-get -y update && \
     apt-get -y install git
 
-RUN git clone ${BLOCKLIST_GIT_REPO} ${BLOCKLIST_IPSETS_PATH}
+RUN git clone -b master --single-branch ${BLOCKLIST_GIT_REPO} ${BLOCKLIST_IPSETS_PATH}
 
 WORKDIR ${BLOCKLIST_IPSETS_PATH}
 RUN git checkout master
