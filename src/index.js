@@ -142,6 +142,11 @@ repoUpdater.on('error', function(err) {
 
 http.createServer(function(request, response) {
     let resp = {};
+    log.info({
+        remoteIp: request.socket.remoteAddress,
+        userAgent: request.headers['user-agent'],
+        path: request.url
+    });
     response.setHeader('Connection', 'close');
     const urlParts = url.parse(request.url, true);
     if (urlParts.pathname === '/check' && 'ip' in urlParts.query) {
