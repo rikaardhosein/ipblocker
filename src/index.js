@@ -142,6 +142,14 @@ repoUpdater.on('error', function(err) {
 net.createServer((socket) => {
         const stream = byline(socket);
         let resp = {};
+
+        stream.on('error', (err) => {
+            log.error({
+                error: err.message,
+                remoteIp: socket.remoteAddress
+            });
+        });
+
         stream.on('data', (ip) => {
             ip = String(ip)
             log.info({
@@ -158,12 +166,6 @@ net.createServer((socket) => {
             socket.write(JSON.stringify(resp).replace('\n', ' ')+'\n');
         });
 
-        stream.on('error', (err) => {
-            log.error({
-                error: err.message,
-                remoteIp: socket.remoteAddress
-            });
-        });
     })
     .listen(port + 1, host, () => {
         log.info({
