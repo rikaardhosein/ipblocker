@@ -8,32 +8,7 @@ describe('IP Blacklist', function() {
 
     describe('#add', function() {
 
-        it('adding a subnet should add its normalized form', function() {
-            const blacklist = new ip_blacklist.IpBlacklist();
-            const entry = '192.168.1.134/26';
-            const metadata = {};
 
-            assert.isFalse(entry in blacklist.map)
-            assert.isFalse(iphelper.normalize_cidr_subnet(entry) in blacklist.map);
-
-            blacklist.add(entry, metadata);
-
-            assert.isFalse(entry in blacklist.map)
-            assert.isTrue(iphelper.normalize_cidr_subnet(entry) in blacklist.map);
-        });
-
-        it('adding an ip address should add the ip address without modifications', function() {
-            const blacklist = new ip_blacklist.IpBlacklist();
-            const entry = '127.0.0.1';
-            const metadata = {};
-
-            assert.isFalse(entry in blacklist.map);
-
-            blacklist.add(entry, metadata);
-
-            assert.isTrue(entry in blacklist.map);
-
-        });
     });
 
     describe('#get', function() {

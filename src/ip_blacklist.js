@@ -1,31 +1,30 @@
 const ip_helper = require('./ip_helper');
+const iptrie = require('iptrie');
 
 class IpBlacklist {
     constructor() {
+				this.blacklist = new iptrie.IPTrie();
         this.map = {};
     };
 
     add(ip, metadata) {
-        if (ip.indexOf('/') !== -1) {
-            ip = ip_helper.normalize_cidr_subnet(ip);
-        }
-        this.map[ip] = metadata;
+			const parts = ip.split('/');
+			ip = parts[0];	
+			let mask = 32;
+
+			if(parts.length == 2) {
+				mask = parseInt(parts[1])
+			}
+			this.blacklist.add(ip, mask, metadata);
     };
 
     get(ip) {
-        if (ip in this.map) {
-            return this.map[ip];
-        }
-        const subnets = ip_helper.ip_to_cidr_subnets(ip)
-        let subnet;
-        for (var i = 0; i < subnets.length; i++) {
-            subnet = subnets[i];
-            if (subnet in this.map) {
-                return this.map[subnet];
-            }
-        }
-        return null;
-    }
+			let res = this.blacklist.find(ip);
+			if (res == null){
+				res = null;	
+			}	
+			return res;
+		}
 };
 
 module.exports = {
